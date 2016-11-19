@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 using Xamarin.Forms;
 
-namespace XamCognitiveDemo
+namespace XamCognitiveDemo.Views
 {
-    public partial class MainPage : ContentPage
+    public partial class CameraPage : ContentPage
     {
-        public MainPage()
+        public CameraPage()
         {
             InitializeComponent();
         }

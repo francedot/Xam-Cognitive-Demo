@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 
 using Xamarin.Forms;
+using XamCognitiveDemo.Views;
 
 namespace XamCognitiveDemo
 {
@@ -13,7 +14,7 @@ namespace XamCognitiveDemo
         {
             InitializeComponent();
 
-            MainPage = new XamCognitiveDemo.MainPage();
+            MainPage = new CameraPage();
         }
 
         protected override void OnStart()
