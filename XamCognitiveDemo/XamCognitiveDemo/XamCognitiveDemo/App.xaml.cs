@@ -9,7 +9,7 @@ namespace XamCognitiveDemo
         {
             InitializeComponent();
 
-            MainPage = new MainPage();
+            MainPage = new CameraPage();
         }
 
         protected override void OnStart()

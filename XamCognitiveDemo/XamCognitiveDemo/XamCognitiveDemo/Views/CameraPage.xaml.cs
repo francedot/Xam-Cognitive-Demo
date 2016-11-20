@@ -1,4 +1,10 @@
-﻿using Xamarin.Forms;
+﻿using System;
+using System.ComponentModel;
+using System.Globalization;
+using System.Reflection;
+using System.Threading.Tasks;
+using Xamarin.Forms;
+using XamCognitiveDemo.Events;
 using XamCognitiveDemo.Models;
 using XamCognitiveDemo.Services;
 using XamCognitiveDemo.ViewModels;
@@ -7,16 +13,15 @@ namespace XamCognitiveDemo.Views
 {
     public partial class CameraPage : ContentPage
     {
-        public VideoAnalysisViewModel ViewModel => ViewModelLocator.VideoAnalysisViewModel;
+        public static CameraPage Instance { get; set; }
 
         public CameraPage()
         {
+            Instance = this;
+
             InitializeComponent();
-            this.BindingContext = ViewModel;
+            this.BindingContext = new CameraPageViewModel();
 
-            //CameraView.SetBinding(Controls.CameraView.VideoFrameProperty, new Binding("VideoFrame", BindingMode.TwoWay));
-
-            //CameraView.VideoFrame = new VideoFrame();
         }
     }
 }

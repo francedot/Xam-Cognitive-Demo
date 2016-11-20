@@ -1,58 +1,48 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Windows.Devices.Enumeration;
-using Windows.Devices.Sensors;
 using Windows.Graphics.Display;
 using Windows.Graphics.Imaging;
-using Windows.Media;
 using Windows.Media.Capture;
-using Windows.Media.Effects;
 using Windows.Media.MediaProperties;
-using Windows.Storage;
 using Windows.Storage.Streams;
 using Windows.System.Display;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media.Imaging;
-using Xamarin.Forms;
 using XamCognitiveDemo.Events;
-using XamCognitiveDemo.Models;
 
 namespace XamCognitiveDemo.UWP.Controls
 {
     public sealed partial class NativeCameraView : UserControl
     {
-
-        private readonly DisplayInformation _displayInformation = DisplayInformation.GetForCurrentView();
-        private readonly SimpleOrientationSensor _orientationSensor = SimpleOrientationSensor.GetDefault();
         private readonly DisplayRequest _displayRequest = new DisplayRequest();
         private DisplayOrientations _displayOrientation = DisplayOrientations.Portrait;
-
-        // Rotation metadata to apply to preview stream (https://msdn.microsoft.com/en-us/library/windows/apps/xaml/hh868174.aspx)
-        private static readonly Guid RotationKey = new Guid("C380465D-2271-428C-9B83-ECEA3B4A85C1"); // (MF_MT_VIDEO_ROTATION)
-
-        public event EventHandler<NewFrameEventArgs> NewFrameCaptured;
-
+        private static readonly Guid RotationKey = new Guid("C380465D-2271-428C-9B83-ECEA3B4A85C1");
         private MediaCapture _mediaCapture;
+        private DeviceInformation _frontCamera;
         private bool _isInitialized;
         private bool _isPreviewing;
         private bool _externalCamera;
         private bool _mirroringPreview;
+        private DispatcherTimer _timer;
 
-        private DeviceInformation _backCamera;
-        private DeviceInformation _frontCamera;
-        private bool _isBackCamera = false;
+        public event EventHandler<NewFrameEventArgs> NewFrameCaptured;
 
         public NativeCameraView()
         {
             this.InitializeComponent();
         }
+        public int CameraResolutionWidth { get; set; }
+
+        public int CameraResolutionHeight { get; set; }
+
+        public double CameraAspectRatio { get; set; }
+
+        public VideoEncodingProperties VideoProperties { get; set; }
 
         public async Task InitializeCameraAsync()
         {
@@ -61,18 +51,6 @@ namespace XamCognitiveDemo.UWP.Controls
                 var devices = await DeviceInformation.FindAllAsync(DeviceClass.VideoCapture);
                 var audioDevice = (await DeviceInformation.FindAllAsync(DeviceClass.AudioCapture)).FirstOrDefault();
                 _frontCamera = devices.FirstOrDefault(f => f.Name.Contains("Front"));
-                _backCamera = devices.FirstOrDefault(b => b.Name.Contains("Back"));
-                //var cameraDevice = devices.FirstOrDefault(c => c.EnclosureLocation != null && c.EnclosureLocation.Panel == Windows.Devices.Enumeration.Panel.Back);
-                //// Get any camera if there isn't one on the back panel
-                //cameraDevice = cameraDevice ?? devices.FirstOrDefault();
-
-                var cameraDevice = _isBackCamera ? _backCamera : _frontCamera;
-
-                if (cameraDevice == null)
-                {
-                    Debug.WriteLine("No camera found");
-                    return;
-                }
 
                 _mediaCapture = new MediaCapture();
 
@@ -80,16 +58,13 @@ namespace XamCognitiveDemo.UWP.Controls
                 {
                     await _mediaCapture.InitializeAsync(new MediaCaptureInitializationSettings
                     {
-                        VideoDeviceId = cameraDevice.Id,
+                        VideoDeviceId = _frontCamera.Id,
                         AudioDeviceId = audioDevice.Id,
                         StreamingCaptureMode = StreamingCaptureMode.Video,
                         PhotoCaptureSource = PhotoCaptureSource.Photo,
                     });
 
                     await SetVideoEncodingToHighestResolution(true);
-
-                    //_mediaCapture.AudioDeviceController.VolumePercent = 0;
-                    //_mediaCapture.AudioDeviceController.Muted = true;
 
                     _isInitialized = true;
                 }
@@ -100,12 +75,12 @@ namespace XamCognitiveDemo.UWP.Controls
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("Exception initializing MediaCapture - {0}: {1}", cameraDevice.Id, ex.ToString());
+                    Debug.WriteLine("Exception initializing MediaCapture - {0}: {1}", _frontCamera.Id, ex.ToString());
                 }
 
                 if (_isInitialized)
                 {
-                    if (cameraDevice.EnclosureLocation == null || cameraDevice.EnclosureLocation.Panel == Windows.Devices.Enumeration.Panel.Unknown)
+                    if (_frontCamera.EnclosureLocation == null || _frontCamera.EnclosureLocation.Panel == Windows.Devices.Enumeration.Panel.Unknown)
                     {
                         _externalCamera = true;
                     }
@@ -115,12 +90,80 @@ namespace XamCognitiveDemo.UWP.Controls
                         _externalCamera = false;
 
                         // Mirror preview if camera is on front panel
-                        _mirroringPreview = (cameraDevice.EnclosureLocation.Panel == Windows.Devices.Enumeration.Panel.Front);
+                        _mirroringPreview = (_frontCamera.EnclosureLocation.Panel == Windows.Devices.Enumeration.Panel.Front);
                     }
                     await StartPreviewAsync();
                 }
             }
         }
+
+        private async Task StartPreviewAsync()
+        {
+            // Prevent the device from sleeping while the preview is running
+            _displayRequest.RequestActive();
+
+            // Setup preview source in UI and mirror if required
+            VideoCapture.Source = _mediaCapture;
+            VideoCapture.FlowDirection = _mirroringPreview ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+
+            this.VideoProperties = this._mediaCapture.VideoDeviceController.GetMediaStreamProperties(MediaStreamType.VideoPreview) as VideoEncodingProperties;
+
+            // Start preview
+            await _mediaCapture.StartPreviewAsync();
+            _isPreviewing = true;
+
+            if (_isPreviewing)
+            {
+                await SetPreviewRotationAsync();
+            }
+
+            _timer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(0.5)
+            };
+            _timer.Tick += async (sender, o) =>
+            {
+                if (_mediaCapture == null)
+                {
+                    return;
+                }
+
+                const BitmapPixelFormat inputPixelFormat = BitmapPixelFormat.Bgra8;
+                var previewFrame = new Windows.Media.VideoFrame(inputPixelFormat, CameraResolutionWidth, CameraResolutionHeight);
+                await _mediaCapture.GetPreviewFrameAsync(previewFrame);
+                var imageBytes = await GetPixelBytesFromSoftwareBitmapAsync(previewFrame.SoftwareBitmap);
+
+                NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(new Models.VideoFrame()
+                {
+                    ImageBytes = imageBytes,
+                    Timestamp = DateTime.Now
+                }));
+
+                previewFrame.Dispose();
+            };
+            _timer.Start();
+        }
+
+        private async Task StopPreviewAsync()
+        {
+            _isPreviewing = false;
+            await _mediaCapture.StopPreviewAsync();
+
+            _timer.Stop();
+            _timer = default(DispatcherTimer);
+
+            // Use dispatcher because sometimes this method is called from non-UI threads
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                // UI cleanup
+                VideoCapture.Source = null;
+
+                // Allow device screen to sleep now preview is stopped
+                _displayRequest.RequestRelease();
+            });
+        }
+
+        #region Helpers
 
         private async Task SetVideoEncodingToHighestResolution(bool isForRealTimeProcessing = false)
         {
@@ -145,90 +188,6 @@ namespace XamCognitiveDemo.UWP.Controls
             }
         }
 
-        public int CameraResolutionWidth { get; set; }
-
-        public int CameraResolutionHeight { get; set; }
-
-        public double CameraAspectRatio { get; set; }
-
-        private async Task StartPreviewAsync()
-        {
-            // Prevent the device from sleeping while the preview is running
-            _displayRequest.RequestActive();
-
-            // Setup preview source in UI and mirror if required
-            VideoCapture.Source = _mediaCapture;
-            VideoCapture.FlowDirection = _mirroringPreview ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
-
-            this.VideoProperties = this._mediaCapture.VideoDeviceController.GetMediaStreamProperties(MediaStreamType.VideoPreview) as VideoEncodingProperties;
-
-
-            // Start preview
-            await _mediaCapture.StartPreviewAsync();
-            _isPreviewing = true;
-
-            if (_isPreviewing)
-            {
-                await SetPreviewRotationAsync();
-            }
-
-            
-
-            var t = new DispatcherTimer();
-            t.Interval = TimeSpan.FromSeconds(10);
-            t.Tick += (sender, o) =>
-            {
-                if (_mediaCapture != null)
-                {
-                    Device.BeginInvokeOnMainThread(async () =>
-                    {
-                        const BitmapPixelFormat inputPixelFormat = BitmapPixelFormat.Bgra8;
-                        using (
-                            var previewFrame = new Windows.Media.VideoFrame(inputPixelFormat, CameraResolutionWidth, CameraResolutionHeight))
-                        {
-                            await _mediaCapture.GetPreviewFrameAsync(previewFrame);
-                            var imageBytes = await GetPixelBytesFromSoftwareBitmapAsync(previewFrame.SoftwareBitmap);
-                            //var imageStream = new MemoryStream(imageBytes);
-
-                            var file = await KnownFolders.PicturesLibrary.CreateFileAsync("Immagine.jpeg", Windows.Storage.CreationCollisionOption.ReplaceExisting);
-                            using (var ws = await file.OpenStreamForWriteAsync())
-                            {
-                                await ws.WriteAsync(imageBytes, 0, imageBytes.Length);
-                            }
-
-                            NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(new Models.VideoFrame()
-                            {
-                                ImageBytes = imageBytes,
-                                Timestamp = DateTime.Now
-                            }));
-
-                            //var imageStream = new InMemoryRandomAccessStream();
-                            //await _mediaCapture.CapturePhotoToStreamAsync(ImageEncodingProperties.CreateJpeg(), imageStream);
-                            //var f = new Models.VideoFrame()
-                            //{
-                            //    Timestamp = DateTime.Now
-                            //};
-                            //f.ImageStream = imageStream.AsStream();
-                            //NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(f));
-
-
-                            //var imageStream = new InMemoryRandomAccessStream();
-                            //await _mediaCapture.CapturePhotoToStreamAsync(ImageEncodingProperties.CreateJpeg(), imageStream);
-                            //var f = new Models.VideoFrame()
-                            //{
-                            //    Timestamp = DateTime.Now
-                            //};
-                            //f.ImageStream = imageStream.AsStreamForRead();
-                            //NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(f));
-                        }
-                    });
-                }
-            };
-            t.Start();
-        }
-
-        public VideoEncodingProperties VideoProperties { get; set; }
-
         private static async Task<byte[]> GetPixelBytesFromSoftwareBitmapAsync(SoftwareBitmap softwareBitmap)
         {
             using (InMemoryRandomAccessStream stream = new InMemoryRandomAccessStream())
@@ -247,6 +206,39 @@ namespace XamCognitiveDemo.UWP.Controls
                     return bytes;
                 }
 
+            }
+        }
+
+        private static int ConvertDisplayOrientationToDegrees(DisplayOrientations orientation)
+        {
+            switch (orientation)
+            {
+                case DisplayOrientations.Portrait:
+                    return 90;
+                case DisplayOrientations.LandscapeFlipped:
+                    return 180;
+                case DisplayOrientations.PortraitFlipped:
+                    return 270;
+                case DisplayOrientations.Landscape:
+                default:
+                    return 0;
+            }
+        }
+
+        private async Task CleanupCameraAsync()
+        {
+            if (_isInitialized)
+            {
+                if (_isPreviewing)
+                {
+                    await StopPreviewAsync();
+                }
+                _isInitialized = false;
+            }
+            if (_mediaCapture != null)
+            {
+                _mediaCapture.Dispose();
+                _mediaCapture = null;
             }
         }
 
@@ -273,60 +265,6 @@ namespace XamCognitiveDemo.UWP.Controls
             await _mediaCapture.SetEncodingPropertiesAsync(MediaStreamType.VideoPreview, props, null);
         }
 
-        private async Task StopPreviewAsync()
-        {
-            _isPreviewing = false;
-            await _mediaCapture.StopPreviewAsync();
-
-            // Use dispatcher because sometimes this method is called from non-UI threads
-            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-            {
-                // UI cleanup
-                VideoCapture.Source = null;
-
-                // Allow device screen to sleep now preview is stopped
-                _displayRequest.RequestRelease();
-            });
-        }
-
-        private async Task CleanupCameraAsync()
-        {
-            if (_isInitialized)
-            {
-                if (_isPreviewing)
-                {
-                    await StopPreviewAsync();
-                }
-                _isInitialized = false;
-            }
-            if (_mediaCapture != null)
-            {
-                _mediaCapture.Dispose();
-                _mediaCapture = null;
-            }
-        }
-
-        private static int ConvertDisplayOrientationToDegrees(DisplayOrientations orientation)
-        {
-            switch (orientation)
-            {
-                case DisplayOrientations.Portrait:
-                    return 90;
-                case DisplayOrientations.LandscapeFlipped:
-                    return 180;
-                case DisplayOrientations.PortraitFlipped:
-                    return 270;
-                case DisplayOrientations.Landscape:
-                default:
-                    return 0;
-            }
-        }
-
-        private async void OnSwitchCamera(object sender, TappedRoutedEventArgs e)
-        {
-            await CleanupCameraAsync();
-            _isBackCamera = !_isBackCamera;
-            await InitializeCameraAsync();
-        }
+        #endregion
     }
 }

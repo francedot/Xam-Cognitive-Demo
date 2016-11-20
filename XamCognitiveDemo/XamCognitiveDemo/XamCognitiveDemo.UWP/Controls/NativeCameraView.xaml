@@ -9,12 +9,6 @@
 
     <Grid>
         <CaptureElement x:Name="VideoCapture"  VerticalAlignment="Stretch" HorizontalAlignment="Stretch"></CaptureElement>
-        <!--<AppBarButton HorizontalAlignment="Right" Foreground="White" Height="100" Width="100" FontSize="80">--><!--Margin="0,20,20,0"--><!--
-            <AppBarButton.Icon>
-                <FontIcon Glyph="&#xE89E;"/>
-            </AppBarButton.Icon>
-        </AppBarButton>-->
-        <TextBlock HorizontalAlignment="Right"  FontFamily="Segoe MDL2 Assets" Text="&#xE89E;" Foreground="White" FontSize="40" Margin="0,28,28,0" Tapped="OnSwitchCamera"/>
     </Grid>
   
 </UserControl>

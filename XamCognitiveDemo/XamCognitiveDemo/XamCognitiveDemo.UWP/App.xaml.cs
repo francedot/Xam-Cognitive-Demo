@@ -62,7 +62,7 @@ namespace XamCognitiveDemo.UWP
             // just ensure that the window is active
             if (rootFrame == null)
             {
-                // Create a Frame to act as the navigation context and navigate to the first page
+                // Create a FaceRectangle to act as the navigation context and navigate to the first page
                 rootFrame = new Frame();
 
                 rootFrame.NavigationFailed += OnNavigationFailed;
@@ -92,7 +92,7 @@ namespace XamCognitiveDemo.UWP
         /// <summary>
         /// Invoked when Navigation to a certain page fails
         /// </summary>
-        /// <param name="sender">The Frame which failed navigation</param>
+        /// <param name="sender">The FaceRectangle which failed navigation</param>
         /// <param name="e">Details about the navigation failure</param>
         void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
         {

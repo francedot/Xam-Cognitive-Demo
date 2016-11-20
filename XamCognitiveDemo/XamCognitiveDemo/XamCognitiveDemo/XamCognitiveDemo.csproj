@@ -39,33 +39,20 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\CameraView.cs" />
+    <Compile Include="Events\FaceRectangleEventArgs.cs" />
     <Compile Include="Events\NewFrameEventArgs.cs" />
     <Compile Include="Events\NewResultEventArgs.cs" />
     <Compile Include="Models\AnalysisResult.cs" />
     <Compile Include="Models\VideoFrame.cs" />
     <Compile Include="Services\RtVideoAnalyzer.cs" />
     <Compile Include="ViewModels\CameraPageViewModel.cs" />
-    <Compile Include="ViewModels\MainPageViewModel.cs" />
-    <Compile Include="ViewModels\VideoAnalysisViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="Views\CameraPage.xaml.cs">
       <DependentUpon>CameraPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\DummyConverter.cs" />
-    <Compile Include="Views\MainPage.xaml.cs">
-      <DependentUpon>MainPage.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Services\ViewModelLocator.cs" />
-    <Compile Include="Views\VideoAnalysisPage.xaml.cs">
-      <DependentUpon>VideoAnalysisPage.xaml</DependentUpon>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Views\MainPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:UpdateDesignTimeXaml</Generator>
-    </EmbeddedResource>
     <EmbeddedResource Include="App.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:UpdateDesignTimeXaml</Generator>
@@ -121,12 +108,6 @@
   <ItemGroup />
   <ItemGroup>
     <EmbeddedResource Include="Views\CameraPage.xaml">
-      <Generator>MSBuild:UpdateDesignTimeXaml</Generator>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Views\VideoAnalysisPage.xaml">
       <Generator>MSBuild:UpdateDesignTimeXaml</Generator>
       <SubType>Designer</SubType>
     </EmbeddedResource>

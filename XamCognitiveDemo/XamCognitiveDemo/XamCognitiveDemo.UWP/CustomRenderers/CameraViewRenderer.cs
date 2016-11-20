@@ -12,7 +12,6 @@ namespace XamCognitiveDemo.UWP.CustomRenderers
     public class CameraViewRenderer : ViewRenderer<CameraView, NativeCameraView>
     {
         private CameraView _cameraView;
-        private VideoFrame _latestVideoFrame;
 
         protected override async void OnElementChanged(ElementChangedEventArgs<CameraView> e)
         {
@@ -34,9 +33,7 @@ namespace XamCognitiveDemo.UWP.CustomRenderers
 
         private void NativeCameraViewOnNewFrameCaptured(object sender, NewFrameEventArgs e)
         {
-            //_latestVideoFrame?.ImageStream?.Dispose();
-
-            _latestVideoFrame = _cameraView.VideoFrame = e.Frame;
+            _cameraView.VideoFrame = e.Frame;
         }
     }
 }

@@ -16,19 +16,5 @@ namespace XamCognitiveDemo.Controls
             set { SetValue(VideoFrameProperty, value); }
         }
 
-        public static readonly BindableProperty FrameRateProperty =
-            BindableProperty.Create(nameof(VideoFrame), typeof(double), typeof(CameraView),
-                default(double), BindingMode.TwoWay, null, FrameRateChanged);
-
-
-        public double FrameRate
-        {
-            get { return (double)GetValue(FrameRateProperty); }
-            set { SetValue(FrameRateProperty, value); }
-        }
-
-        private static void FrameRateChanged(BindableObject bindable, object oldvalue, object newvalue)
-        {
-        }
     }
 }
