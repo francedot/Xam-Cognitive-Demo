@@ -4,16 +4,11 @@ using XamCognitiveDemo.ViewModels;
 
 namespace XamCognitiveDemo.Views
 {
-    public partial class MainPage : ContentPage
+    public partial class MainPage : TabbedPage
     {
-
-        public MainPageViewModel ViewModel { get; set; }
-
         public MainPage()
         {
             InitializeComponent();
-            this.BindingContext = 
-                ViewModel = ViewModelLocator.MainPageViewModel = new MainPageViewModel();
         }
     }
 }

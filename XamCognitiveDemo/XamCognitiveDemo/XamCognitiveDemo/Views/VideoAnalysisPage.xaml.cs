@@ -4,14 +4,20 @@ using XamCognitiveDemo.ViewModels;
 
 namespace XamCognitiveDemo.Views
 {
-    public partial class CameraPage : ContentPage
+    public partial class VideoAnalysisPage : ContentPage
     {
         public VideoAnalysisViewModel ViewModel => ViewModelLocator.VideoAnalysisViewModel;
 
-        public CameraPage()
+        public VideoAnalysisPage()
         {
             InitializeComponent();
             this.BindingContext = ViewModel;
+        }
+
+        protected override void OnAppearing()
+        {
+            base.OnAppearing();
+            //ViewModel.OnNavigatingTo();
         }
     }
 }

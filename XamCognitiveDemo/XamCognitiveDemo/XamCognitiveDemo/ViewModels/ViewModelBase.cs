@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace XamCognitiveDemo.ViewModels
 {
@@ -26,6 +27,30 @@ namespace XamCognitiveDemo.ViewModels
             field = value;
             OnPropertyChanged(name);
             return true;
+        }
+
+        #endregion
+
+        #region Navigation
+
+        public virtual void OnNavigatingFrom(object parameter = null)
+        {
+            return;
+        }
+
+        public virtual void OnNavigatingTo(object parameter = null)
+        {
+            return;
+        }
+
+        public virtual async Task OnNavigatingFromAsync(object parameter = null)
+        {
+            await Task.Yield();
+        }
+
+        public virtual async Task OnNavigatingToAsync(object parameter = null)
+        {
+            await Task.Yield();
         }
 
         #endregion

@@ -1,18 +1,19 @@
-﻿using System;
-using System.ComponentModel;
-using Android.Views;
-using Android.Widget;
-using Xamarin.Forms;
+﻿using Xamarin.Forms;
 using Xamarin.Forms.Platform.Android;
 using XamCognitiveDemo.Controls;
 using XamCognitiveDemo.Droid.Controls;
 using XamCognitiveDemo.Droid.CustomRenderers;
+using XamCognitiveDemo.Events;
+using XamCognitiveDemo.Models;
 
 [assembly: ExportRenderer(typeof(CameraView), typeof(CameraViewRenderer))]
 namespace XamCognitiveDemo.Droid.CustomRenderers
 {
     public class CameraViewRenderer : Xamarin.Forms.Platform.Android.AppCompat.ViewRenderer<CameraView, NativeCameraView>
     {
+        private CameraView _cameraView;
+        private VideoFrame _latestVideoFrame;
+
         protected override void OnElementChanged(ElementChangedEventArgs<CameraView> e)
         {
             base.OnElementChanged(e);
@@ -22,27 +23,26 @@ namespace XamCognitiveDemo.Droid.CustomRenderers
                 return;
             }
 
+            _cameraView = e.NewElement;
+
             var nativeCameraView = new NativeCameraView(Forms.Context);
+            nativeCameraView.NewFrameCaptured += NativeCameraViewOnNewFrameCaptured;
+
             nativeCameraView.SetupUserInterface((int) Element.HeightRequest, (int) Element.WidthRequest);
             nativeCameraView.SetupEventHandlers();
 
             SetNativeControl(nativeCameraView);
         }
-        protected override void OnElementPropertyChanged(object sender, PropertyChangedEventArgs e)
+
+        private void NativeCameraViewOnNewFrameCaptured(object sender, NewFrameEventArgs e)
         {
-            base.OnElementPropertyChanged(sender, e);
-            //switch (e.PropertyName)
-            //{
-            //    case "HeightRequest":
-            //    {
-            //        Control.LayoutParameters = new 
-            //    }
-            //}
+            _latestVideoFrame?.ImageStream?.Dispose();
+
+            _latestVideoFrame = _cameraView.VideoFrame = e.Frame;
         }
 
         protected override NativeCameraView CreateNativeControl()
         {
-
             return new NativeCameraView(Forms.Context);
         }
     }

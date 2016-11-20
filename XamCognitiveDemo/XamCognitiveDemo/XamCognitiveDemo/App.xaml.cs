@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using Xamarin.Forms;
+﻿using Xamarin.Forms;
 using XamCognitiveDemo.Views;
 
 namespace XamCognitiveDemo
@@ -14,7 +9,7 @@ namespace XamCognitiveDemo
         {
             InitializeComponent();
 
-            MainPage = new CameraPage();
+            MainPage = new MainPage();
         }
 
         protected override void OnStart()

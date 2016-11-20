@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using Android.App;
 using Android.Content;
 using Android.Graphics;
@@ -9,6 +10,7 @@ using Android.Util;
 using Android.Views;
 using Android.Widget;
 using Xamarin.Forms;
+using XamCognitiveDemo.Events;
 using View = Android.Views.View;
 
 #pragma warning disable 618
@@ -22,6 +24,9 @@ namespace XamCognitiveDemo.Droid.Controls
         Android.Widget.Button _toggleFlashButton;
         Android.Widget.Button _switchCameraButton;
         Android.Views.View _view;
+
+        public event EventHandler<NewFrameEventArgs> NewFrameCaptured;
+
 
         Activity _activity;
         CameraFacing _cameraType;
@@ -141,6 +146,21 @@ namespace XamCognitiveDemo.Droid.Controls
             }
 
             _camera.StartPreview();
+
+            var timer = new Timer(async state =>
+            {
+                var image = _textureView.Bitmap;
+                var imageStream = new MemoryStream();
+                await image.CompressAsync(Bitmap.CompressFormat.Jpeg, 50, imageStream);
+                image.Recycle();
+
+                NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(new Models.VideoFrame()
+                {
+                    ImageStream = imageStream,
+                    Timestamp = DateTime.Now
+                }));
+
+            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(0.4));
         }
 
         private void ToggleFlashButtonTapped(object sender, EventArgs e)
