@@ -19,6 +19,7 @@ using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media.Imaging;
 using Xamarin.Forms;
 using XamCognitiveDemo.Events;
 using XamCognitiveDemo.Models;
@@ -81,12 +82,14 @@ namespace XamCognitiveDemo.UWP.Controls
                     {
                         VideoDeviceId = cameraDevice.Id,
                         AudioDeviceId = audioDevice.Id,
-                        StreamingCaptureMode = StreamingCaptureMode.AudioAndVideo,
-                        PhotoCaptureSource = PhotoCaptureSource.VideoPreview,
+                        StreamingCaptureMode = StreamingCaptureMode.Video,
+                        PhotoCaptureSource = PhotoCaptureSource.Photo,
                     });
 
+                    await SetVideoEncodingToHighestResolution(true);
+
                     //_mediaCapture.AudioDeviceController.VolumePercent = 0;
-                    _mediaCapture.AudioDeviceController.Muted = true;
+                    //_mediaCapture.AudioDeviceController.Muted = true;
 
                     _isInitialized = true;
                 }
@@ -119,6 +122,35 @@ namespace XamCognitiveDemo.UWP.Controls
             }
         }
 
+        private async Task SetVideoEncodingToHighestResolution(bool isForRealTimeProcessing = false)
+        {
+            VideoEncodingProperties highestVideoEncodingSetting;
+            if (isForRealTimeProcessing)
+            {
+                uint maxHeightForRealTime = 720;
+                highestVideoEncodingSetting = this._mediaCapture.VideoDeviceController.GetAvailableMediaStreamProperties(MediaStreamType.VideoPreview).Cast<VideoEncodingProperties>().Where(v => v.Height <= maxHeightForRealTime).OrderByDescending(v => v.Width * v.Height * (v.FrameRate.Numerator / v.FrameRate.Denominator)).First();
+            }
+            else
+            {
+                highestVideoEncodingSetting = this._mediaCapture.VideoDeviceController.GetAvailableMediaStreamProperties(MediaStreamType.VideoPreview).Cast<VideoEncodingProperties>().OrderByDescending(v => v.Width * v.Height * (v.FrameRate.Numerator / v.FrameRate.Denominator)).First();
+            }
+
+            if (highestVideoEncodingSetting != null)
+            {
+                CameraAspectRatio = (double)highestVideoEncodingSetting.Width / (double)highestVideoEncodingSetting.Height;
+                CameraResolutionHeight = (int)highestVideoEncodingSetting.Height;
+                CameraResolutionWidth = (int)highestVideoEncodingSetting.Width;
+
+                await _mediaCapture.VideoDeviceController.SetMediaStreamPropertiesAsync(MediaStreamType.VideoPreview, highestVideoEncodingSetting);
+            }
+        }
+
+        public int CameraResolutionWidth { get; set; }
+
+        public int CameraResolutionHeight { get; set; }
+
+        public double CameraAspectRatio { get; set; }
+
         private async Task StartPreviewAsync()
         {
             // Prevent the device from sleeping while the preview is running
@@ -143,7 +175,7 @@ namespace XamCognitiveDemo.UWP.Controls
             
 
             var t = new DispatcherTimer();
-            t.Interval = TimeSpan.FromSeconds(1);
+            t.Interval = TimeSpan.FromSeconds(10);
             t.Tick += (sender, o) =>
             {
                 if (_mediaCapture != null)
@@ -152,25 +184,33 @@ namespace XamCognitiveDemo.UWP.Controls
                     {
                         const BitmapPixelFormat inputPixelFormat = BitmapPixelFormat.Bgra8;
                         using (
-                            var previewFrame = new Windows.Media.VideoFrame(inputPixelFormat, (int)this.VideoProperties.Width,
-                                (int)this.VideoProperties.Height))
+                            var previewFrame = new Windows.Media.VideoFrame(inputPixelFormat, CameraResolutionWidth, CameraResolutionHeight))
                         {
                             await _mediaCapture.GetPreviewFrameAsync(previewFrame);
                             var imageBytes = await GetPixelBytesFromSoftwareBitmapAsync(previewFrame.SoftwareBitmap);
-                            var imageStream = new MemoryStream(imageBytes);
+                            //var imageStream = new MemoryStream(imageBytes);
+
+                            var file = await KnownFolders.PicturesLibrary.CreateFileAsync("Immagine.jpeg", Windows.Storage.CreationCollisionOption.ReplaceExisting);
+                            using (var ws = await file.OpenStreamForWriteAsync())
+                            {
+                                await ws.WriteAsync(imageBytes, 0, imageBytes.Length);
+                            }
+
                             NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(new Models.VideoFrame()
                             {
-                                ImageStream = imageStream,
+                                ImageBytes = imageBytes,
                                 Timestamp = DateTime.Now
                             }));
 
+                            //var imageStream = new InMemoryRandomAccessStream();
                             //await _mediaCapture.CapturePhotoToStreamAsync(ImageEncodingProperties.CreateJpeg(), imageStream);
                             //var f = new Models.VideoFrame()
                             //{
                             //    Timestamp = DateTime.Now
                             //};
-                            //f.ImageStream = imageStream.AsStreamForRead();
+                            //f.ImageStream = imageStream.AsStream();
                             //NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(f));
+
 
                             //var imageStream = new InMemoryRandomAccessStream();
                             //await _mediaCapture.CapturePhotoToStreamAsync(ImageEncodingProperties.CreateJpeg(), imageStream);
@@ -194,6 +234,7 @@ namespace XamCognitiveDemo.UWP.Controls
             using (InMemoryRandomAccessStream stream = new InMemoryRandomAccessStream())
             {
                 BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, stream);
+                encoder.BitmapTransform.Rotation = BitmapRotation.Clockwise270Degrees;
                 encoder.SetSoftwareBitmap(softwareBitmap);
                 await encoder.FlushAsync();
 
@@ -205,6 +246,7 @@ namespace XamCognitiveDemo.UWP.Controls
                     reader.ReadBytes(bytes);
                     return bytes;
                 }
+
             }
         }
 

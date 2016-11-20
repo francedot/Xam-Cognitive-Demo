@@ -156,7 +156,7 @@ namespace XamCognitiveDemo.Droid.Controls
 
                 NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(new Models.VideoFrame()
                 {
-                    ImageStream = imageStream,
+                    ImageBytes = imageStream.ToArray(),
                     Timestamp = DateTime.Now
                 }));
 

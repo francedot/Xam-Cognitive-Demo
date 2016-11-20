@@ -1,4 +1,5 @@
 ﻿using Xamarin.Forms;
+using XamCognitiveDemo.Models;
 using XamCognitiveDemo.Services;
 using XamCognitiveDemo.ViewModels;
 
@@ -12,6 +13,10 @@ namespace XamCognitiveDemo.Views
         {
             InitializeComponent();
             this.BindingContext = ViewModel;
+
+            //CameraView.SetBinding(Controls.CameraView.VideoFrameProperty, new Binding("VideoFrame", BindingMode.TwoWay));
+
+            //CameraView.VideoFrame = new VideoFrame();
         }
     }
 }

@@ -36,8 +36,6 @@ namespace XamCognitiveDemo.Droid.CustomRenderers
 
         private void NativeCameraViewOnNewFrameCaptured(object sender, NewFrameEventArgs e)
         {
-            _latestVideoFrame?.ImageStream?.Dispose();
-
             _latestVideoFrame = _cameraView.VideoFrame = e.Frame;
         }
 

@@ -4,6 +4,6 @@
              xmlns:controls="clr-namespace:XamCognitiveDemo.Controls;assembly=XamCognitiveDemo"
              x:Class="XamCognitiveDemo.Views.CameraPage">
 
-  <controls:CameraView HeightRequest="400"/>
+  <controls:CameraView HeightRequest="400" VideoFrame="{Binding VideoFrame, Mode=TwoWay}"/>
   
 </ContentPage>

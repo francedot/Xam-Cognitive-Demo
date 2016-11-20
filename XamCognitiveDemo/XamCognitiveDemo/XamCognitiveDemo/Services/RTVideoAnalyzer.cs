@@ -1,10 +1,17 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.ProjectOxford.Emotion;
+using Microsoft.ProjectOxford.Emotion.Contract;
 using Microsoft.ProjectOxford.Face;
 using Microsoft.ProjectOxford.Face.Contract;
+using Newtonsoft.Json;
 using Xamarin.Forms;
 using XamCognitiveDemo.Events;
 using XamCognitiveDemo.Models;
@@ -16,6 +23,7 @@ namespace XamCognitiveDemo.Services
         private readonly FaceServiceClient _faceClient;
         private readonly EmotionServiceClient _emotionClient;
         private bool _stopTimer = false;
+        public bool IsRunning { get; set; }
 
         #region Events
 
@@ -72,39 +80,85 @@ namespace XamCognitiveDemo.Services
 
         public RtVideoAnalyzer()
         {
-            _faceClient = new FaceServiceClient("TODO");
-            _emotionClient = new EmotionServiceClient("TODO");
+            _faceClient = new FaceServiceClient("685d3b9d785f4015a234d2abaa81d035");
+            _emotionClient = new EmotionServiceClient("d633f5f017d143cea1f01a630b4003a9");
         }
+
+        public string EmotionBaseUri { get; set; } = "https://api.projectoxford.ai/emotion/v1.0/recognize";
 
         public Func<VideoFrame> ProducerDelegate { get; set; }
         public AnalysisResult LastAnalysisResult { get; set; }
         public Func<Task> AnalysisFunction { get; set; }
-        public TimeSpan AnalysisTimeout { get; set; } = TimeSpan.FromMilliseconds(5000);
         public double FrameRate { get; } = 0.5;
+
+        public async Task<Emotion[]> RecognizeEmotionsAsync(byte[] imageBytes)
+        {
+            // Request body
+
+            using (var content = new ByteArrayContent(imageBytes))
+            //using (var streamContent = new StreamContent(imageStream))
+            //using (var stringContent = new StringContent(content, Encoding.UTF8, "application/octet-stream"))
+            using (var httpClient = new HttpClient(new HttpClientHandler(), false))
+            {
+                await content.LoadIntoBufferAsync();
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "d633f5f017d143cea1f01a630b4003a9");
+                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var response = await httpClient.PostAsync(EmotionBaseUri, content);
+                Debug.WriteLine("Response Is" + response);
+                var resultContent = await response.Content.ReadAsStringAsync();
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+                Debug.WriteLine("Content Is" + resultContent);
+
+                var emotions = JsonConvert.DeserializeObject<Emotion[]>(resultContent);
+
+                //content.Dispose();
+                //httpClient.Dispose();
+
+                return emotions;
+            }
+        }
 
         public void StartProcessingCamera()
         {
             // Start a timer that runs after 1 minute.
             Device.StartTimer(TimeSpan.FromSeconds(1.0 / FrameRate), () =>
             {
-                Task.Factory.StartNew(async () =>
+                var videoFrame = ProducerDelegate();
+                if (videoFrame == null)
                 {
-                    var videoFrame = ProducerDelegate();
+                    return true;
+                }
+                IsRunning = true;
+
+                Device.BeginInvokeOnMainThread(async () =>
+                {
                     // Do the actual request and wait for it to finish.
-                    var emotions = await _emotionClient.RecognizeAsync(videoFrame.ImageStream);
-                    var faces = await _faceClient.DetectAsync(videoFrame.ImageStream);
+
+                    var emotions = await RecognizeEmotionsAsync(videoFrame.ImageBytes);
+
+                    //var emotions = await _emotionClient.RecognizeAsync(videoFrame.ImageStream);
+                    //var faces = await _faceClient.DetectAsync(videoFrame.ImageStream);
                     LastAnalysisResult = new AnalysisResult()
                     {
-                        Faces = faces,
+                        //Faces = faces,
                         Emotions = emotions
                     };
+                    OnNewResultAvailable(new NewResultEventArgs
+                    {
+                        AnalysisResult = LastAnalysisResult
+                    });
+                    IsRunning = false;
                     // Switch back to the UI thread to update the UI
                     if (!_stopTimer)
                     {
                         Device.BeginInvokeOnMainThread(StartProcessingCamera);
                     }
+                });
 
-                }, TaskCreationOptions.LongRunning);
 
                 // Don't repeat the timer (we will start a new timer when the request is finished)
                 return false;

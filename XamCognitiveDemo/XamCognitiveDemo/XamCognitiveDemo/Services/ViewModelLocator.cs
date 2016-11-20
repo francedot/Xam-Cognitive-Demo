@@ -7,5 +7,11 @@ namespace XamCognitiveDemo.Services
         //public static MainPageViewModel MainPageViewModel { get; set; }
         //public static CameraPageViewModel CameraPageViewModel { get; set; }
         public static VideoAnalysisViewModel VideoAnalysisViewModel { get; set; }
+
+        static ViewModelLocator()
+        {
+            VideoAnalysisViewModel = new VideoAnalysisViewModel();
+        }
+
     }
 }
