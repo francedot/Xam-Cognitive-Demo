@@ -13,15 +13,10 @@ namespace XamCognitiveDemo.Views
 {
     public partial class CameraPage : ContentPage
     {
-        public static CameraPage Instance { get; set; }
-
         public CameraPage()
         {
-            Instance = this;
-
             InitializeComponent();
             this.BindingContext = new CameraPageViewModel();
-
         }
     }
 }

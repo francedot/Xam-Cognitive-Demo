@@ -48,11 +48,8 @@ namespace XamCognitiveDemo.UWP
 #endif
 
             if (Windows.Foundation.Metadata.ApiInformation.IsTypePresent("Windows.UI.ViewManagement.StatusBar"))
-
             {
-
                 await Windows.UI.ViewManagement.StatusBar.GetForCurrentView().HideAsync();
-
             }
 
 
