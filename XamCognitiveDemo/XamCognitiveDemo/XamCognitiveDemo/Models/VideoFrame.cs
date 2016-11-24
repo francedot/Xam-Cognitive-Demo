@@ -7,5 +7,6 @@ namespace XamCognitiveDemo.Models
     {
         public DateTime Timestamp { get; set; }
         public byte[] ImageBytes { get; set; }
+        public Tuple<int, int> PixelDimension { get; set; }
     }
 }

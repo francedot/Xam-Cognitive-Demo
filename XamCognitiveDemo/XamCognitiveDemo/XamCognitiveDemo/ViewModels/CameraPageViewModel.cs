@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using Microsoft.ProjectOxford.Emotion.Contract;
+using Microsoft.ProjectOxford.Face.Contract;
 using Xamarin.Forms;
 using XamCognitiveDemo.Events;
 using XamCognitiveDemo.Models;
@@ -14,6 +15,9 @@ namespace XamCognitiveDemo.ViewModels
         private readonly RtVideoAnalyzer _videoAnalyzer;
         private VideoFrame _videoFrame;
         private Scores _scores;
+        private Face _face;
+
+        public event EventHandler<NewResultEventArgs> NewResultProvided;
 
         public CameraPageViewModel()
         {
@@ -38,14 +42,31 @@ namespace XamCognitiveDemo.ViewModels
             set { Set(ref _scores, value); }
         }
 
+        public Face Face
+        {
+            get { return _face; }
+            set { Set(ref _face, value); }
+        }
+
         private void OnUpdateAnalysisResult(object sender, NewResultEventArgs newResultEventArgs)
         {
-            var result = newResultEventArgs.AnalysisResult?.Emotions?.FirstOrDefault();
-            if (result == null)
+            var emotions = newResultEventArgs.AnalysisResult?.Emotion;
+            if (emotions != null)
             {
-                return;
+                Scores = emotions.Scores;
             }
-            Scores = result.Scores;
+            var face = newResultEventArgs.AnalysisResult?.Face;
+            if (face != null)
+            {
+                Face = face;
+                NewResultProvided?.Invoke(this, new NewResultEventArgs()
+                {
+                    AnalysisResult = new AnalysisResult()
+                    {
+                        Face = face
+                    }
+                });
+            }
         }
     }
 }

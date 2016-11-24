@@ -71,6 +71,8 @@
       </StackLayout>
     </ScrollView>
     
+    <BoxView BackgroundColor="Yellow" x:Name="FaceRectangleBox" HorizontalOptions="Start" VerticalOptions="Start"></BoxView>
+    
   </Grid>
   
 </ContentPage>

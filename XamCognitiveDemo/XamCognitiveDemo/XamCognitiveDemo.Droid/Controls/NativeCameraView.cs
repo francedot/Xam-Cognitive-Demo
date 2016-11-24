@@ -10,6 +10,7 @@ using Android.Runtime;
 using Android.Util;
 using Android.Views;
 using Android.Widget;
+using Microsoft.ProjectOxford.Vision.Contract;
 using XamCognitiveDemo.Events;
 using Camera = Android.Hardware.Camera;
 
@@ -124,7 +125,8 @@ namespace XamCognitiveDemo.Droid.Controls
                 NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(new Models.VideoFrame
                 {
                     ImageBytes = imageStream.ToArray(),
-                    Timestamp = DateTime.Now
+                    Timestamp = DateTime.Now,
+                    PixelDimension = new Tuple<int, int>(image.Width, image.Height)
                 }));
 
                 imageStream.Dispose();

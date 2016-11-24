@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Devices.Enumeration;
 using Windows.Graphics.Display;
@@ -13,6 +14,7 @@ using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media.Imaging;
 using XamCognitiveDemo.Events;
 
 namespace XamCognitiveDemo.UWP.Controls
@@ -132,16 +134,34 @@ namespace XamCognitiveDemo.UWP.Controls
                 var previewFrame = new Windows.Media.VideoFrame(inputPixelFormat, CameraResolutionWidth, CameraResolutionHeight);
                 await _mediaCapture.GetPreviewFrameAsync(previewFrame);
                 var imageBytes = await GetPixelBytesFromSoftwareBitmapAsync(previewFrame.SoftwareBitmap);
+                var image = await AsBitmapImageAsync(imageBytes);
 
                 NewFrameCaptured?.Invoke(this, new NewFrameEventArgs(new Models.VideoFrame()
                 {
                     ImageBytes = imageBytes,
-                    Timestamp = DateTime.Now
+                    Timestamp = DateTime.Now,
+                    PixelDimension = new Tuple<int, int>(image.PixelWidth, image.PixelHeight)
                 }));
 
                 previewFrame.Dispose();
             };
             _timer.Start();
+        }
+
+        public static async Task<BitmapImage> AsBitmapImageAsync(byte[] byteArray)
+        {
+            if (byteArray != null)
+            {
+                using (var stream = new InMemoryRandomAccessStream())
+                {
+                    await stream.WriteAsync(byteArray.AsBuffer());
+                    var image = new BitmapImage();
+                    stream.Seek(0);
+                    image.SetSource(stream);
+                    return image;
+                }
+            }
+            return null;
         }
 
         private async Task StopPreviewAsync()
